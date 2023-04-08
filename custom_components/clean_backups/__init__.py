@@ -1,5 +1,5 @@
 """
-Support for automating the deletion of snapshots.
+Support for automating the deletion of backups.
 """
 import logging
 import os
@@ -17,33 +17,26 @@ import voluptuous as vol
 
 _LOGGER = logging.getLogger(__name__)
 
-DOMAIN = 'clean_up_snapshots_service'
-ATTR_NAME = 'number_of_snapshots_to_keep'
-# USE_SSL_IP = 'use_ssl_with_ip_addres'
+DOMAIN = 'clean_backups'
+ATTR_NAME = 'number_to_keep'
 DEFAULT_NUM = 0
 BACKUPS_URL_PATH = 'backups'
 
 CONFIG_SCHEMA = vol.Schema({
     DOMAIN: vol.Schema({
-#        vol.Required(CONF_HOST): cv.string,
-#        vol.Required(CONF_TOKEN): cv.string,
         vol.Optional(ATTR_NAME, default=DEFAULT_NUM): int,
-#        vol.Optional(USE_SSL_IP, default=False): cv.boolean
     }),
 }, extra=vol.ALLOW_EXTRA)
 
 async def async_setup(hass, config):
     conf = config[DOMAIN]
     supervisor_url = 'http://supervisor/'
-#    api_path = 'api/hassio/'
-#    hassio_url = f"{base_url}/{api_path}" if (base_url[-1] != '/') else f"{base_url}{api_path}"
     auth_token = os.getenv('SUPERVISOR_TOKEN')
-    num_snapshots_to_keep = conf.get(ATTR_NAME, DEFAULT_NUM)
-#    use_ssl_with_ip = conf.get(USE_SSL_IP, False)
+    num_to_keep = conf.get(ATTR_NAME, DEFAULT_NUM)
     headers = {'authorization': "Bearer {}".format(auth_token)}
 
-    async def async_get_snapshots():
-        _LOGGER.info('Calling get snapshots')
+    async def async_get_backups():
+        _LOGGER.info('Calling get backups')
         async with aiohttp.ClientSession(raise_for_status=True) as session:
             try:
                 with async_timeout.timeout(10):
@@ -52,67 +45,67 @@ async def async_setup(hass, config):
                 await session.close()
                 return data['data']['backups']
             except aiohttp.ClientError:
-                _LOGGER.error("Client error on calling get snapshots", exc_info=True)
+                _LOGGER.error("Client error on calling get backups", exc_info=True)
                 await session.close()
             except asyncio.TimeoutError:
-                _LOGGER.error("Client timeout error on get snapshots", exc_info=True)
+                _LOGGER.error("Client timeout error on get backups", exc_info=True)
                 await session.close()
             except Exception:
                 _LOGGER.error("Unknown exception thrown", exc_info=True)
                 await session.close()
 
-    async def async_remove_snapshots(stale_snapshots):
-        for snapshot in stale_snapshots:
+    async def async_remove_backups(stale_backups):
+        for backup in stale_backups:
             async with aiohttp.ClientSession(raise_for_status=True) as session:
-                _LOGGER.info('Attempting to remove snapshot: slug=%s', snapshot['slug'])
+                _LOGGER.info('Attempting to remove backup: slug=%s', backup['slug'])
                 # call hassio API deletion
                 try:
                     with async_timeout.timeout(10):
-                        resp = await session.delete(supervisor_url + f"{BACKUPS_URL_PATH}/" + snapshot['slug'], headers=headers)
+                        resp = await session.delete(supervisor_url + f"{BACKUPS_URL_PATH}/" + backup['slug'], headers=headers)
                     res = await resp.json()
                     if res['result'].lower() == "ok":
-                        _LOGGER.info("Deleted snapshot %s", snapshot["slug"])
+                        _LOGGER.info("Deleted backup %s", backup["slug"])
                         await session.close()
                         continue
                     else:
                         # log an error
-                        _LOGGER.warning("Failed to delete snapshot %s: %s", snapshot["slug"], str(res.status_code))
+                        _LOGGER.warning("Failed to delete backup %s: %s", backup["slug"], str(res.status_code))
 
                 except aiohttp.ClientError:
-                    _LOGGER.error("Client error on calling delete snapshot", exc_info=True)
+                    _LOGGER.error("Client error on calling delete backup", exc_info=True)
                     await session.close()
                 except asyncio.TimeoutError:
-                    _LOGGER.error("Client timeout error on delete snapshot", exc_info=True)
+                    _LOGGER.error("Client timeout error on delete backup", exc_info=True)
                     await session.close()
                 except Exception:
-                    _LOGGER.error("Unknown exception thrown on calling delete snapshot", exc_info=True)
+                    _LOGGER.error("Unknown exception thrown on calling delete backup", exc_info=True)
                     await session.close()
 
     async def async_handle_clean_up(call):
-        # Allow the service call override the configuration.
-        num_to_keep = call.data.get(ATTR_NAME, num_snapshots_to_keep)
-        _LOGGER.info('Number of snapshots we are going to keep: %s', str(num_to_keep))
+        # Allow the service call to override the configuration.
+        num_to_keep = call.data.get(ATTR_NAME, num_to_keep)
+        _LOGGER.info('Number of backups we are going to keep: %s', str(num_to_keep))
 
         if num_to_keep == 0:
-            _LOGGER.info('Number of snapshots to keep was zero which is default so no snapshots will be removed')
+            _LOGGER.info('Number of backups to keep was zero which is default so no backups will be removed')
             return
 
-        snapshots = await async_get_snapshots()
-        _LOGGER.info('Snapshots: %s', snapshots)
+        snapshots = await async_get_backups()
+        _LOGGER.info('Backups: %s', backups)
 
-        # filter the snapshots
-        if snapshots is not None:
-            for snapshot in snapshots:
-                d = parse(snapshot["date"])
+        # filter the backups
+        if backups is not None:
+            for backup in backups:
+                d = parse(backup["date"])
                 if d.tzinfo is None or d.tzinfo.utcoffset(d) is None:
-                    _LOGGER.info("Naive DateTime found for snapshot %s, setting to UTC...", snapshot["slug"])
-                    snapshot["date"] = d.replace(tzinfo=pytz.utc).isoformat()
-            snapshots.sort(key=lambda item: parse(item["date"]), reverse=True)
-            stale_snapshots = snapshots[num_to_keep:]
-            _LOGGER.info('Stale Snapshots: {}'.format(stale_snapshots))
-            await async_remove_snapshots(stale_snapshots)
+                    _LOGGER.info("Naive DateTime found for backup %s, setting to UTC...", backup["slug"])
+                    backup["date"] = d.replace(tzinfo=pytz.utc).isoformat()
+            backups.sort(key=lambda item: parse(item["date"]), reverse=True)
+            stale_backups = backups[num_to_keep:]
+            _LOGGER.info('Stale Backups: {}'.format(stale_backups))
+            await async_remove_backups(stale_backups)
         else:
-            _LOGGER.info('No snapshots found.')
+            _LOGGER.info('No backups found.')
 
     hass.services.async_register(DOMAIN, 'clean_up', async_handle_clean_up)
 
