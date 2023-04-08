@@ -1,5 +1,5 @@
 {
-    "name": "Clean backups service",
-    "domains": ["clean_backups"],
+    "name": "Clean up snapshots service",
+    "domains": ["clean_up_snapshots_service"],
     "render_readme": true
 }

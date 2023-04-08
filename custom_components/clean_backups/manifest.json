@@ -1,6 +1,6 @@
 {
-    "domain": "clean_backups",
-    "name": "Clean up your backups",
+    "domain": "clean_up_snapshots_service",
+    "name": "Clean up your snapshots",
     "documentation": "https://github.com/tmonck/clean_up_snapshots",
     "dependencies": [],
     "codeowners": [],

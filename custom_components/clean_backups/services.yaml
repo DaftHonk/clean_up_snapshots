@@ -1,6 +1,6 @@
 clean_up:
-  description: Cleans up backups taken by home assistant
+  description: Cleans up the snapshots taken by home assistant
   fields:
-    number_to_keep:
-      description: Number of backups you wish to keep.
+    number_of_snapshots_to_keep:
+      description: Number of snapshots you wish to keep.
       example: 3
