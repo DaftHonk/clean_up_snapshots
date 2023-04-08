@@ -18,7 +18,7 @@ To manage the installation and upgrades easier it's recommendated to use [HACS][
 
 1. Navigate to HACS Store
 2. Search for "Clean up snapshots service"
-3. Click on the service, and then on _Install this repository in HACS_
+3. Click on the service, and then on _DOWNLOAD_
 4. Restart Home Assistant (Settings > System > Restart)
 5. Add the following to your configuration.yaml:
 ```yaml

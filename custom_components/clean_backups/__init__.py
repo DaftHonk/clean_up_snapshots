@@ -19,27 +19,20 @@ _LOGGER = logging.getLogger(__name__)
 
 DOMAIN = 'clean_up_snapshots_service'
 ATTR_NAME = 'number_of_snapshots_to_keep'
-# USE_SSL_IP = 'use_ssl_with_ip_addres'
 DEFAULT_NUM = 0
 BACKUPS_URL_PATH = 'backups'
 
 CONFIG_SCHEMA = vol.Schema({
     DOMAIN: vol.Schema({
-#        vol.Required(CONF_HOST): cv.string,
-#        vol.Required(CONF_TOKEN): cv.string,
         vol.Optional(ATTR_NAME, default=DEFAULT_NUM): int,
-#        vol.Optional(USE_SSL_IP, default=False): cv.boolean
     }),
 }, extra=vol.ALLOW_EXTRA)
 
 async def async_setup(hass, config):
     conf = config[DOMAIN]
     supervisor_url = 'http://supervisor/'
-#    api_path = 'api/hassio/'
-#    hassio_url = f"{base_url}/{api_path}" if (base_url[-1] != '/') else f"{base_url}{api_path}"
     auth_token = os.getenv('SUPERVISOR_TOKEN')
     num_snapshots_to_keep = conf.get(ATTR_NAME, DEFAULT_NUM)
-#    use_ssl_with_ip = conf.get(USE_SSL_IP, False)
     headers = {'authorization': "Bearer {}".format(auth_token)}
 
     async def async_get_snapshots():
